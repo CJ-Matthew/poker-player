@@ -1,35 +1,129 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import { WelcomeScreen } from './components/WelcomeScreen';
+import { LobbyScreen } from './components/LobbyScreen';
+import { TableScreen } from './components/TableScreen';
+import { useTable } from './hooks/useTable';
+import * as firebaseService from './services/firebase';
+import type { PlayerAction } from './types/poker';
 
-function App() {
-  const [count, setCount] = useState(0)
+type Screen = 'welcome' | 'lobby' | 'table';
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+export default function App() {
+  const [screen, setScreen] = useState<Screen>('welcome');
+  const [playerName, setPlayerName] = useState<string>('');
+  const [tableId, setTableId] = useState<string>('');
+  const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
+  
+  const tableData = useTable(tableId);
+
+  const handleCreateTable = async (smallBlind: string, bigBlind: string): Promise<void> => {
+    if (!playerName || !smallBlind || !bigBlind) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      const { tableId: newTableId, playerId } = await firebaseService.createTable(
+        playerName, 
+        smallBlind, 
+        bigBlind
+      );
+      setTableId(newTableId);
+      setCurrentPlayerId(playerId);
+      setScreen('table');
+    } catch (error) {
+      alert('Error creating table: ' + (error as Error).message);
+    }
+  };
+
+  const handleJoinTable = async (joinTableId: string, buyIn: string): Promise<void> => {
+    if (!playerName || !joinTableId || !buyIn) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      const playerId = await firebaseService.joinTable(joinTableId, playerName, buyIn);
+      setCurrentPlayerId(playerId);
+      setTableId(joinTableId);
+      setScreen('table');
+    } catch (error) {
+      alert('Error joining table: ' + (error as Error).message);
+    }
+  };
+
+  const handleStartRound = (): void => {
+    if (tableData) {
+      firebaseService.startRound(tableId, tableData);
+    }
+  };
+
+  const handleMoveDealer = (): void => {
+    if (tableData) {
+      firebaseService.moveDealer(
+        tableId, 
+        tableData.dealerPosition, 
+        Object.keys(tableData.players).length
+      );
+    }
+  };
+
+  const handlePlayerAction = (action: PlayerAction, raiseAmount?: number): void => {
+    if (tableData) {
+      firebaseService.playerAction(tableId, tableData, currentPlayerId, action, raiseAmount);
+    }
+  };
+
+  const handleEndRound = (winnerId: string): void => {
+    if (tableData) {
+      firebaseService.endRound(tableId, tableData, winnerId);
+    }
+  };
+
+  const handleUpdateChips = (playerId: string, newChips: string): void => {
+    firebaseService.updatePlayerChips(tableId, playerId, newChips);
+  };
+
+  const handleUpdateBlinds = (smallBlind: string, bigBlind: string): void => {
+    firebaseService.updateBlinds(tableId, smallBlind, bigBlind);
+  };
+
+  if (screen === 'welcome') {
+    return (
+      <WelcomeScreen
+        playerName={playerName}
+        setPlayerName={setPlayerName}
+        onContinue={() => setScreen('lobby')}
+      />
+    );
+  }
+
+  if (screen === 'lobby') {
+    return (
+      <LobbyScreen
+        playerName={playerName}
+        onCreateTable={handleCreateTable}
+        onJoinTable={handleJoinTable}
+        onBack={() => setScreen('welcome')}
+      />
+    );
+  }
+
+  if (screen === 'table') {
+    return (
+      <TableScreen
+        tableId={tableId}
+        tableData={tableData}
+        currentPlayerId={currentPlayerId}
+        onStartRound={handleStartRound}
+        onMoveDealer={handleMoveDealer}
+        onPlayerAction={handlePlayerAction}
+        onEndRound={handleEndRound}
+        onUpdateChips={handleUpdateChips}
+        onUpdateBlinds={handleUpdateBlinds}
+      />
+    );
+  }
+
+  return null;
 }
-
-export default App
