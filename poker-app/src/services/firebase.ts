@@ -23,15 +23,16 @@ interface CreateTableResult {
 export const createTable = async (
   playerName: string, 
   smallBlind: string | number, 
-  bigBlind: string | number
+  bigBlind: string | number, 
+  buyIn: string | number // Add buyIn parameter
 ): Promise<CreateTableResult> => {
   const newTableRef = push(ref(database, 'tables'));
   const newTableId = newTableRef.key;
-  
+
   if (!newTableId) {
     throw new Error('Failed to generate table ID');
   }
-  
+
   const playerId = `${playerName}_${Date.now()}`;
 
   const tableData: TableData = {
@@ -41,7 +42,7 @@ export const createTable = async (
     players: {
       [playerId]: {
         name: playerName,
-        chips: 0,
+        chips: parseInt(String(buyIn)), // Set initial chips to buyIn
         position: 0,
         folded: false,
         currentBet: 0
@@ -204,8 +205,13 @@ export const endRound = async (
 export const updatePlayerChips = async (
   tableId: string, 
   playerId: string, 
-  newChips: string | number
+  newChips: string
 ): Promise<void> => {
+  const chips = parseInt(newChips, 10);
+  if (chips < 0) {
+    alert('Chips cannot be negative!');
+    return;
+  }
   await update(ref(database, `tables/${tableId}/players/${playerId}`), { 
     chips: parseInt(String(newChips)) 
   });
