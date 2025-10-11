@@ -184,15 +184,17 @@ export const playerAction = async (
 export const endRound = async (
   tableId: string, 
   tableData: TableData, 
-  winnerId: string
+  winnerId: string,
 ): Promise<void> => {
   const updates: Record<string, unknown> = {};
   const winner = tableData.players[winnerId];
+  const newDealerPos = (tableData.dealerPosition + 1) % Object.keys(tableData.players).length;
   updates[`tables/${tableId}/players/${winnerId}/chips`] = winner.chips + tableData.pot;
   updates[`tables/${tableId}/pot`] = 0;
   updates[`tables/${tableId}/currentBet`] = 0;
   updates[`tables/${tableId}/roundActive`] = false;
   updates[`tables/${tableId}/currentTurn`] = -1;
+  updates[`tables/${tableId}/dealerPosition`] = newDealerPos;
 
   Object.keys(tableData.players).forEach(id => {
     updates[`tables/${tableId}/players/${id}/currentBet`] = 0;
