@@ -3,7 +3,7 @@ import { getDatabase, ref, set, push, update, get, Database } from 'firebase/dat
 import type { TableData, Player, PlayerAction } from '../types/poker';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAirrWaVgFyjcnz-OvxSHCENER7e-AI85I",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "poker-player.firebaseapp.com",
   projectId: "poker-player",
   storageBucket: "poker-player.firebasestorage.app",
@@ -226,4 +226,15 @@ export const updateBlinds = async (
     smallBlind: parseInt(String(smallBlind)),
     bigBlind: parseInt(String(bigBlind))
   });
+};
+
+export const updatePlayerPositions = async (
+  tableId: string,
+  orderedPlayers: [string, Player][]
+): Promise<void> => {
+  const updates: Record<string, number> = {};
+  orderedPlayers.forEach(([id], index) => {
+    updates[`tables/${tableId}/players/${id}/position`] = index;
+  });
+  await update(ref(database), updates);
 };

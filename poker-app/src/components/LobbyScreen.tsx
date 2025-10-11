@@ -60,7 +60,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             <button
               onClick={() => onCreateTable(smallBlind, bigBlind, buyIn)}
               // Primary button style (bright white to match WelcomeScreen button)
-              className="bg-white text-blue-600 hover:bg-gray-200 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
+              className="bg-white text-blue-600 hover:bg-gray-200 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50"
+              disabled={!smallBlind || !bigBlind || !buyIn || !Number.isFinite(+smallBlind) || !Number.isFinite(+bigBlind) || !Number.isFinite(+buyIn)}
             >
               Create Table
             </button>
@@ -86,7 +87,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             <button
               onClick={() => onJoinTable(tableId, joinBuyIn)}
               // Secondary button style (a different color but same look/feel)
-              className="bg-green-400 text-white hover:bg-green-500 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
+              className="bg-green-400 text-white hover:bg-green-500 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50"
+              disabled={!tableId || !joinBuyIn || !Number.isFinite(+joinBuyIn)}
             >
               Join Table
             </button>
