@@ -2,83 +2,108 @@ import React, { useState } from 'react';
 
 interface LobbyScreenProps {
   playerName: string;
-  onCreateTable: (smallBlind: string, bigBlind: string) => void;
+  onCreateTable: (smallBlind: string, bigBlind: string, buyIn: string) => void;
   onJoinTable: (tableId: string, buyIn: string) => void;
   onBack: () => void;
 }
 
-export const LobbyScreen: React.FC<LobbyScreenProps> = ({ 
-  playerName, 
-  onCreateTable, 
-  onJoinTable, 
-  onBack 
+export const LobbyScreen: React.FC<LobbyScreenProps> = ({
+  playerName,
+  onCreateTable,
+  onJoinTable,
+  onBack,
 }) => {
-  const [smallBlind, setSmallBlind] = useState<string>('');
-  const [bigBlind, setBigBlind] = useState<string>('');
-  const [joinTableId, setJoinTableId] = useState<string>('');
-  const [buyIn, setBuyIn] = useState<string>('');
+  const [smallBlind, setSmallBlind] = useState('');
+  const [bigBlind, setBigBlind] = useState('');
+  const [buyIn, setBuyIn] = useState('');
+  const [tableId, setTableId] = useState('');
+  const [joinBuyIn, setJoinBuyIn] = useState('');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-950 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Welcome, {playerName}!</h2>
+    // 1. Full-screen background and center everything
+    <div className="flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+      
+      {/* 2. Content wrapper for max width and vertical alignment */}
+      <div className="max-w-4xl w-full p-6 space-y-6">
         
-        <div className="space-y-6">
-          <div className="border-2 border-gray-200 rounded-lg p-4">
-            <h3 className="text-xl font-semibold mb-4">Create New Table</h3>
+        <h1 className="text-4xl font-extrabold text-center mb-6">
+          Welcome, {playerName}
+        </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Create Table Section */}
+          <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
+            <h2 className="text-2xl font-semibold mb-4">Create a Table</h2>
             <input
-              type="number"
+              type="text"
               placeholder="Small Blind"
               value={smallBlind}
               onChange={(e) => setSmallBlind(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              // Styling for white text in input and better focus state
+              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
             />
             <input
-              type="number"
+              type="text"
               placeholder="Big Blind"
               value={bigBlind}
               onChange={(e) => setBigBlind(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
+            />
+            <input
+              type="text"
+              placeholder="Buy-In Amount"
+              value={buyIn}
+              onChange={(e) => setBuyIn(e.target.value)}
+              className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
             />
             <button
-              onClick={() => onCreateTable(smallBlind, bigBlind)}
-              className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+              onClick={() => onCreateTable(smallBlind, bigBlind, buyIn)}
+              // Primary button style (bright white to match WelcomeScreen button)
+              className="bg-white text-blue-600 hover:bg-gray-200 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
             >
               Create Table
             </button>
           </div>
-
-          <div className="border-2 border-gray-200 rounded-lg p-4">
-            <h3 className="text-xl font-semibold mb-4">Join Existing Table</h3>
+          
+          {/* Join Table Section */}
+          <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
+            <h2 className="text-2xl font-semibold mb-4">Join a Table</h2>
             <input
               type="text"
               placeholder="Table ID"
-              value={joinTableId}
-              onChange={(e) => setJoinTableId(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={tableId}
+              onChange={(e) => setTableId(e.target.value)}
+              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
             />
             <input
-              type="number"
-              placeholder="Buy-in Amount"
-              value={buyIn}
-              onChange={(e) => setBuyIn(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="text"
+              placeholder="Buy-In Amount"
+              value={joinBuyIn}
+              onChange={(e) => setJoinBuyIn(e.target.value)}
+              className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
             />
             <button
-              onClick={() => onJoinTable(joinTableId, buyIn)}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+              onClick={() => onJoinTable(tableId, joinBuyIn)}
+              // Secondary button style (a different color but same look/feel)
+              className="bg-green-400 text-white hover:bg-green-500 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
             >
               Join Table
             </button>
           </div>
         </div>
 
-        <button
-          onClick={onBack}
-          className="w-full mt-6 text-gray-600 hover:text-gray-800 transition"
-        >
-          ← Back
-        </button>
+        {/* Back Button */}
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={onBack}
+            // Muted, outline-style back button
+            className="bg-transparent border border-white text-white hover:bg-white/20 font-semibold py-2 px-6 rounded-full transition duration-150 ease-in-out"
+          >
+            Back
+          </button>
+        </div>
+        
       </div>
     </div>
   );

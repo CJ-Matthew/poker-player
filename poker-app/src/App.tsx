@@ -16,17 +16,23 @@ export default function App() {
   
   const tableData = useTable(tableId);
 
-  const handleCreateTable = async (smallBlind: string, bigBlind: string): Promise<void> => {
-    if (!playerName || !smallBlind || !bigBlind) {
+  const handleCreateTable = async (smallBlind: string, bigBlind: string, buyIn: string): Promise<void> => {
+    if (!playerName || !smallBlind || !bigBlind || !buyIn) {
       alert('Please fill in all fields');
+      return;
+    }
+
+    if (parseInt(buyIn, 10) <= 0) {
+      alert('Buy-in amount must be greater than 0!');
       return;
     }
 
     try {
       const { tableId: newTableId, playerId } = await firebaseService.createTable(
-        playerName, 
-        smallBlind, 
-        bigBlind
+        playerName,
+        smallBlind,
+        bigBlind,
+        buyIn // Pass buyIn to the createTable function
       );
       setTableId(newTableId);
       setCurrentPlayerId(playerId);
