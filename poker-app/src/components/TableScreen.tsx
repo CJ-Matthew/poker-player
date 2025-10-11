@@ -145,14 +145,21 @@ export const TableScreen: React.FC<TableScreenProps> = ({
               className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
               disabled={tableData.roundActive}
             >
-              Edit Blinds
+              Blinds
             </button>
             <button
               onClick={() => setIsEditingChips(true)}
               className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
               disabled={tableData.roundActive}
             >
-              Edit Chips
+              Chips
+            </button>
+            <button
+              onClick={onMoveDealer}
+              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+              disabled={tableData.roundActive}
+            >
+              Move Dealer
             </button>
             <button
               onClick={() => setIsRearrangingPlayers(true)}
@@ -205,27 +212,24 @@ export const TableScreen: React.FC<TableScreenProps> = ({
             <PlayerCard
               key={id}
               player={tableData.players[id]}
-              playerId={id}
               isDealer={idx === tableData.dealerPosition}
               isCurrentTurn={tableData.currentTurn === idx}
-              onEditChips={() => {}}
-              onWinPot={onEndRound}
-              showWinButton={playerOrder.filter((id) => !tableData.players[id].folded).length > 1}
             />
           ))}
         </div>
-        <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
+        <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30 flex justify-center">
           <ActionButtons
             isMyTurn={tableData.currentTurn === playerOrder.findIndex((id) => id === currentPlayerId)}
             currentPlayer={currentPlayer}
             myPlayer={tableData.players[currentPlayerId]}
             currentBet={tableData.currentBet}
             roundActive={tableData.roundActive}
+            tableData={tableData}
             onFold={() => onPlayerAction('fold')}
             onCall={() => onPlayerAction('call')}
             onRaise={handleRaise}
             onStartRound={onStartRound}
-            onMoveDealer={onMoveDealer}
+            onWinPot={onEndRound}
           />
         </div>
       </div>

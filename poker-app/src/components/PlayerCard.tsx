@@ -3,21 +3,14 @@ import type { Player } from '../types/poker';
 
 interface PlayerCardProps {
   player: Player;
-  playerId: string;
   isDealer: boolean;
   isCurrentTurn: boolean;
-  onEditChips: (playerId: string, currentChips: number) => void;
-  onWinPot: (playerId: string) => void;
-  showWinButton: boolean;
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({ 
-  player, 
-  playerId, 
+  player,
   isDealer, 
   isCurrentTurn, 
-  onWinPot,
-  showWinButton 
 }) => {
   return (
     <div
@@ -36,17 +29,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <p className="text-sm text-gray-600">Bet: ${player.currentBet}</p>
       )}
       {player.folded && <p className="text-sm text-red-600 font-semibold">FOLDED</p>}
-      
-      <div className="mt-2 space-y-1">
-        {showWinButton && (
-          <button
-            onClick={() => onWinPot(playerId)}
-            className="w-full text-xs bg-green-500 hover:bg-green-600 text-white py-1 rounded"
-          >
-            Win Pot
-          </button>
-        )}
-      </div>
     </div>
   );
 };

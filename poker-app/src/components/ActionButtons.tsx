@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Player } from '../types/poker';
+import type { Player, TableData } from '../types/poker';
 
 interface ActionButtonsProps {
   isMyTurn: boolean;
@@ -7,11 +7,12 @@ interface ActionButtonsProps {
   myPlayer: Player | undefined;
   currentBet: number;
   roundActive: boolean;
+  tableData: TableData;
   onFold: () => void;
   onCall: () => void;
   onRaise: () => void;
   onStartRound: () => void;
-  onMoveDealer: () => void;
+  onWinPot: (winnerId: string) => void;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({ 
@@ -20,58 +21,73 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   myPlayer,
   currentBet,
   roundActive,
+  tableData,
   onFold, 
   onCall, 
   onRaise,
   onStartRound,
-  onMoveDealer
+  onWinPot
 }) => {
+
+  const activePlayers = Object.entries(tableData.players).filter(
+    ([, player]) => !player.folded
+  )
+  const isOnlyOneActivePlayer = activePlayers.length === 1;
+  const winningPlayerId = isOnlyOneActivePlayer ? activePlayers[0][0] : '-1';
+
   if (!roundActive) {
     return (
       <div className="flex flex-wrap gap-3">
         <button
           onClick={onStartRound}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+          disabled={Object.keys(tableData.players).length === 1}
         >
           Start Round
         </button>
-        <button
-          onClick={onMoveDealer}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-        >
-          Move Dealer
-        </button>
+        
       </div>
     );
   }
 
-  if (isMyTurn && myPlayer) {
-    return (
-      <div className="w-full">
-        <p className="text-lg font-bold mb-3 text-green-700">Your Turn!</p>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={onFold}
-            className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
-          >
-            Fold
-          </button>
-          <button
-            onClick={onCall}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Call ${currentBet - myPlayer.currentBet}
-          </button>
-          <button
-            onClick={onRaise}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
-          >
-            Raise
-          </button>
-        </div>
+if (isMyTurn && myPlayer) {
+  return (
+    <div className="">
+      {/* Container for Fold, Call, and Raise buttons */}
+      <div className="flex flex-wrap gap-3 mb-3">
+        <button
+          onClick={onFold}
+          className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
+        >
+          Fold
+        </button>
+        <button
+          onClick={onCall}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+        >
+          Call ${currentBet - myPlayer.currentBet}
+        </button>
+        <button
+          onClick={onRaise}
+          className="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition"
+        >
+          Raise
+        </button>
       </div>
-    );
-  }
+      
+      {/* Container for Win Pot button (now on its own line) */}
+      <div className="flex justify-center flex-wrap gap-3">
+        <button
+          onClick={() => onWinPot(winningPlayerId)}
+          className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+          disabled={!isOnlyOneActivePlayer}
+        >
+          Win Pot
+        </button>
+      </div>
+    </div>
+  );
+}
 
   if (currentPlayer) {
     return (
