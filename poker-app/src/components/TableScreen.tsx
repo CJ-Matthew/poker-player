@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { ActionButtons } from './ActionButtons';
-import type { TableData, PlayerAction } from '../types/poker';
+import type { TableData, PlayerAction, Player } from '../types/poker';
+import { EditChipsModal } from './modals/EditChipsModal';
+import { EditBlindsModal } from './modals/EditBlindsModal';
+import RearrangePlayersModal from './modals/RearrangePlayersModal';
+
 
 interface TableScreenProps {
   tableId: string;
@@ -26,8 +30,13 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   onUpdateChips,
   onUpdateBlinds,
 }) => {
-  const [isEditingChips, setIsEditingChips] = useState(false); // State to toggle modal visibility
-  const [chipValues, setChipValues] = useState<Record<string, string>>({}); // State to store updated chip values
+  const [isEditingChips, setIsEditingChips] = useState(false);
+  const [isEditingBlinds, setIsEditingBlinds] = useState(false);
+  const [smallBlind, setSmallBlind] = useState('');
+  const [bigBlind, setBigBlind] = useState('');
+  const [isRearrangingPlayers, setIsRearrangingPlayers] = useState(false);
+  const [chipValues, setChipValues] = useState<Record<string, string>>({});
+  const [copyMessage, setCopyMessage] = useState('');
 
   if (!tableData) {
     return (
@@ -38,6 +47,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   }
 
   const players = Object.entries(tableData.players).sort((a, b) => a[1].position - b[1].position);
+  const playerOrder = players.map(([id]) => id); // Add this line
 
   const handleUpdateChips = (): void => {
     Object.entries(chipValues).forEach(([playerId, newChips]) => {
@@ -45,7 +55,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
         onUpdateChips(playerId, newChips);
       }
     });
-    setIsEditingChips(false); // Close the modal after updating
+    setIsEditingChips(false);
   };
 
   const handleChipInputChange = (playerId: string, value: string): void => {
@@ -70,90 +80,144 @@ export const TableScreen: React.FC<TableScreenProps> = ({
     }
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(tableId);
+      setCopyMessage('Table ID copied!');
+      setTimeout(() => setCopyMessage(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      setCopyMessage('Failed to copy.');
+      setTimeout(() => setCopyMessage(''), 2000);
+    }
+  };
+
+  const currentPlayer: [string, Player] | null =
+    tableData.currentTurn >= 0 && tableData.currentTurn < playerOrder.length
+      ? [playerOrder[tableData.currentTurn], tableData.players[playerOrder[tableData.currentTurn]]]
+      : null;
+
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-      <div className="max-w-6xl w-full p-6 space-y-6">
-        {/* Table Info */}
-        <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold">Table ID: {tableId}</h2>
-              <p className="text-sm text-gray-300">Share this ID with friends to join</p>
+    <div className="relative flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+
+      <style>{`
+        .no-spinners::-webkit-outer-spin-button,
+        .no-spinners::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .no-spinners {
+          -moz-appearance: textfield; /* Firefox */
+        }
+        /* Simple fade-in-out animation for the message */
+        @keyframes fade-in-out {
+          0%, 100% { opacity: 0; transform: translate(-50%, -20px); }
+          10%, 90% { opacity: 1; transform: translate(-50%, 16px); }
+        }
+        .animate-fade-in-out {
+          animation: fade-in-out 2s ease-in-out forwards;
+        }
+      `}</style>
+
+      <div className="fixed top-0 left-0 w-full bg-blue-900/50 backdrop-blur-sm shadow-xl border-b border-blue-400/30 z-50">
+        <div className="max-w-6xl mx-auto p-4 flex justify-between items-center">
+          <div>
+            {copyMessage && (
+              <div className="fixed top-0 left-1/2 -translate-x-1/2 mt-4 px-4 py-2 bg-green-500 text-white rounded-md shadow-lg z-50 animate-fade-in-out">
+                {copyMessage}
+              </div>
+            )}
+            <div className="flex flex-col items-start">
+              <div onClick={copyToClipboard} className="cursor-pointer">
+                <h2 className="text-2xl font-bold">
+                  Table ID:{' '}
+                  <span className="text-blue-300 relative px-3 py-1 border border-black-600 rounded-md hover:border-blue-400 transition-colors duration-200">
+                    {tableId}
+                  </span>
+                </h2>
+              </div>
+              <p className="text-sm text-gray-300 mt-2">Share this ID with friends to join</p>
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleUpdateBlinds}
-                className="text-sm text-blue-300 hover:text-blue-100"
-              >
-                Edit Blinds
-              </button>
-              <button
-                onClick={() => setIsEditingChips(true)}
-                className="text-sm text-blue-300 hover:text-blue-100"
-              >
-                Edit Chips
-              </button>
-            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsEditingBlinds(true)}
+              className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
+              disabled={tableData.roundActive}
+            >
+              Edit Blinds
+            </button>
+            <button
+              onClick={() => setIsEditingChips(true)}
+              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+              disabled={tableData.roundActive}
+            >
+              Edit Chips
+            </button>
+            <button
+              onClick={() => setIsRearrangingPlayers(true)}
+              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+              disabled={tableData.roundActive}
+            >
+              Rearrange Players
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Modal for Editing Chips */}
-        {isEditingChips && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">Edit Player Chips</h3>
-              <form className="space-y-4">
-                {players.map(([id, player]) => (
-                  <div key={id} className="flex items-center justify-between">
-                    <span className="text-gray-800">{player.name}:</span>
-                    <input
-                      type="number"
-                      value={chipValues[id] ?? player.chips}
-                      onChange={(e) => handleChipInputChange(id, e.target.value)}
-                      className="w-24 p-2 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                ))}
-              </form>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={handleUpdateChips}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={() => setIsEditingChips(false)}
-                  className="ml-2 bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      {isEditingChips && (
+        <EditChipsModal
+          players={tableData.players}
+          playerOrder={playerOrder}
+          chipValues={chipValues}
+          onChipChange={handleChipInputChange}
+          onSave={handleUpdateChips}
+          onCancel={() => setIsEditingChips(false)}
+        />
+      )}
 
-        {/* Player Cards */}
+      {isEditingBlinds && (
+        <EditBlindsModal
+          smallBlind={smallBlind}
+          bigBlind={bigBlind}
+          onSmallBlindChange={setSmallBlind}
+          onBigBlindChange={setBigBlind}
+          onSave={handleUpdateBlinds}
+          onCancel={() => setIsEditingBlinds(false)}
+        />
+      )}
+
+      {isRearrangingPlayers && (
+        <RearrangePlayersModal
+          tableId={tableId}
+          players={tableData.players}
+          onClose={() => setIsRearrangingPlayers(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-6xl w-full p-6 space-y-6 mt-20">
+        <div className="text-center p-4 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
+          <h3 className="text-2xl font-bold text-yellow-300">Current Pot: ${tableData.pot}</h3>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {players.map(([id, player], idx) => (
+          {playerOrder.map((id, idx) => (
             <PlayerCard
               key={id}
-              player={player}
+              player={tableData.players[id]}
               playerId={id}
               isDealer={idx === tableData.dealerPosition}
               isCurrentTurn={tableData.currentTurn === idx}
-              onEditChips={() => {}} // No longer needed here
+              onEditChips={() => {}}
               onWinPot={onEndRound}
-              showWinButton={players.filter(([, p]) => !p.folded).length > 1}
+              showWinButton={playerOrder.filter((id) => !tableData.players[id].folded).length > 1}
             />
           ))}
         </div>
-
-        {/* Action Buttons */}
         <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
           <ActionButtons
-            isMyTurn={tableData.currentTurn === players.findIndex(([id]) => id === currentPlayerId)}
-            currentPlayer={players[tableData.currentTurn] || null}
+            isMyTurn={tableData.currentTurn === playerOrder.findIndex((id) => id === currentPlayerId)}
+            currentPlayer={currentPlayer}
             myPlayer={tableData.players[currentPlayerId]}
             currentBet={tableData.currentBet}
             roundActive={tableData.roundActive}

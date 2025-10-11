@@ -16,7 +16,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   playerId, 
   isDealer, 
   isCurrentTurn, 
-  onEditChips, 
   onWinPot,
   showWinButton 
 }) => {
@@ -39,12 +38,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       {player.folded && <p className="text-sm text-red-600 font-semibold">FOLDED</p>}
       
       <div className="mt-2 space-y-1">
-        <button
-          onClick={() => onEditChips(playerId, player.chips)}
-          className="w-full text-xs bg-gray-200 hover:bg-gray-300 py-1 rounded"
-        >
-          Edit Chips
-        </button>
         {showWinButton && (
           <button
             onClick={() => onWinPot(playerId)}
