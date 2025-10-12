@@ -46,7 +46,7 @@ export const EditChipsModal: React.FC<EditChipsModalProps> = ({
         </button>
         <button
           onClick={onSave}
-          className="ml-2 bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+          className="ml-2 bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition disabled:opacity-50"
         >
           Save
         </button>

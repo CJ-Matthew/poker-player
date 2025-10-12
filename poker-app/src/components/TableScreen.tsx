@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { ActionButtons } from './ActionButtons';
 import type { TableData, PlayerAction, Player } from '../types/poker';
-import { EditChipsModal } from './modals/EditChipsModal';
 import { EditBlindsModal } from './modals/EditBlindsModal';
-import RearrangePlayersModal from './modals/RearrangePlayersModal';
+import { RaiseModal } from './modals/RaiseModal';
+import ManagePlayersModal from './modals/ManagePlayersModal';
 
 
 interface TableScreenProps {
@@ -30,13 +30,13 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   onUpdateChips,
   onUpdateBlinds,
 }) => {
-  const [isEditingChips, setIsEditingChips] = useState(false);
   const [isEditingBlinds, setIsEditingBlinds] = useState(false);
   const [smallBlind, setSmallBlind] = useState('');
   const [bigBlind, setBigBlind] = useState('');
   const [isRearrangingPlayers, setIsRearrangingPlayers] = useState(false);
   const [chipValues, setChipValues] = useState<Record<string, string>>({});
   const [copyMessage, setCopyMessage] = useState('');
+  const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
 
   if (!tableData) {
     return (
@@ -55,7 +55,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
         onUpdateChips(playerId, newChips);
       }
     });
-    setIsEditingChips(false);
+    setIsRearrangingPlayers(false);
   };
 
   const handleChipInputChange = (playerId: string, value: string): void => {
@@ -66,17 +66,14 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   };
 
   const handleUpdateBlinds = (): void => {
-    const newSB = prompt('Enter new Small Blind:', String(tableData.smallBlind));
-    const newBB = prompt('Enter new Big Blind:', String(tableData.bigBlind));
-    if (newSB && newBB) onUpdateBlinds(newSB, newBB);
+    onUpdateBlinds(smallBlind, bigBlind);
+    setIsEditingBlinds(false)
   };
 
-  const handleRaise = (): void => {
-    const amount = prompt('Raise amount:');
+  const handleRaise = (amount: string): void => {
+
     if (amount && parseInt(amount, 10) > 0) {
       onPlayerAction('raise', parseInt(amount, 10));
-    } else {
-      alert('Raise amount must be greater than 0!');
     }
   };
 
@@ -96,6 +93,12 @@ export const TableScreen: React.FC<TableScreenProps> = ({
     tableData.currentTurn >= 0 && tableData.currentTurn < playerOrder.length
       ? [playerOrder[tableData.currentTurn], tableData.players[playerOrder[tableData.currentTurn]]]
       : null;
+
+  const handleEditBlinds = (): void => {
+    setSmallBlind(String(tableData.smallBlind)); // Initialize with current small blind
+    setBigBlind(String(tableData.bigBlind)); // Initialize with current big blind
+    setIsEditingBlinds(true); // Open the modal
+  };
 
   return (
     <div className="relative flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
@@ -141,45 +144,57 @@ export const TableScreen: React.FC<TableScreenProps> = ({
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsEditingBlinds(true)}
+              onClick={handleEditBlinds}
               className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
               disabled={tableData.roundActive}
             >
               Blinds
             </button>
-            <button
-              onClick={() => setIsEditingChips(true)}
-              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+            {/* <button
+              onClick={handleEditChips}
+              className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
               disabled={tableData.roundActive}
             >
               Chips
-            </button>
+            </button> */}
             <button
               onClick={onMoveDealer}
               className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
               disabled={tableData.roundActive}
             >
-              Move Dealer
+              Dealer
             </button>
             <button
               onClick={() => setIsRearrangingPlayers(true)}
               className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
               disabled={tableData.roundActive}
             >
-              Rearrange Players
+              Players
             </button>
           </div>
         </div>
       </div>
 
-      {isEditingChips && (
-        <EditChipsModal
+      {isRearrangingPlayers && (
+        <ManagePlayersModal
+          tableId={tableId}
           players={tableData.players}
           playerOrder={playerOrder}
           chipValues={chipValues}
           onChipChange={handleChipInputChange}
-          onSave={handleUpdateChips}
-          onCancel={() => setIsEditingChips(false)}
+          onSaveChips={handleUpdateChips}
+          onSaveRearrange={(newOrder) => {
+            // Update player positions based on the new order
+            const updatedPlayers = Object.fromEntries(
+              newOrder.map(([id, player], index) => [
+                id,
+                { ...player, position: index },
+              ])
+            );
+            // Update tableData.players with the new positions
+            tableData.players = updatedPlayers;
+          }}
+          onClose={() => setIsRearrangingPlayers(false)}
         />
       )}
 
@@ -194,11 +209,23 @@ export const TableScreen: React.FC<TableScreenProps> = ({
         />
       )}
 
-      {isRearrangingPlayers && (
+      {/* {isRearrangingPlayers && (
         <RearrangePlayersModal
           tableId={tableId}
           players={tableData.players}
           onClose={() => setIsRearrangingPlayers(false)}
+        />
+      )} */}
+
+      {isRaiseModalOpen && (
+        <RaiseModal
+          currentBet={tableData.currentBet}
+          minRaise={tableData.currentBet*2}
+          onRaise={(amount: number) => {
+            handleRaise(String(amount));
+            setIsRaiseModalOpen(false);
+          }}
+          onCancel={() => setIsRaiseModalOpen(false)}
         />
       )}
 
@@ -227,7 +254,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
             tableData={tableData}
             onFold={() => onPlayerAction('fold')}
             onCall={() => onPlayerAction('call')}
-            onRaise={handleRaise}
+            onRaiseOpen={() => setIsRaiseModalOpen(true)}
             onStartRound={onStartRound}
             onWinPot={onEndRound}
           />
