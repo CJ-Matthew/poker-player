@@ -10,7 +10,7 @@ interface ActionButtonsProps {
   tableData: TableData;
   onFold: () => void;
   onCall: () => void;
-  onRaise: () => void;
+  onRaiseOpen: () => void;
   onStartRound: () => void;
   onWinPot: (winnerId: string) => void;
 }
@@ -24,14 +24,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   tableData,
   onFold, 
   onCall, 
-  onRaise,
+  onRaiseOpen,
   onStartRound,
   onWinPot
 }) => {
 
   const activePlayers = Object.entries(tableData.players).filter(
     ([, player]) => !player.folded
-  )
+  );
   const isOnlyOneActivePlayer = activePlayers.length === 1;
   const winningPlayerId = isOnlyOneActivePlayer ? activePlayers[0][0] : '-1';
 
@@ -45,49 +45,53 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         >
           Start Round
         </button>
-        
       </div>
     );
   }
 
-if (isMyTurn && myPlayer) {
-  return (
-    <div className="">
-      {/* Container for Fold, Call, and Raise buttons */}
-      <div className="flex flex-wrap gap-3 mb-3">
-        <button
-          onClick={onFold}
-          className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
-        >
-          Fold
-        </button>
-        <button
-          onClick={onCall}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-        >
-          Call ${currentBet - myPlayer.currentBet}
-        </button>
-        <button
-          onClick={onRaise}
-          className="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition"
-        >
-          Raise
-        </button>
+  if (isMyTurn && myPlayer) {
+    const callValue = currentBet - myPlayer.currentBet;
+
+    return (
+      <div className="">
+        {/* Container for Fold, Call/Check, and Raise buttons */}
+        <div className="flex flex-wrap gap-3 mb-3">
+          <button
+            onClick={onFold}
+            className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition disabled:opacity-50"
+            disabled={isOnlyOneActivePlayer}
+          >
+            Fold
+          </button>
+          <button
+            onClick={onCall}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            disabled={isOnlyOneActivePlayer}
+          >
+            {callValue === 0 ? 'Check' : `Call $${callValue}`}
+          </button>
+          <button
+            onClick={onRaiseOpen}
+            className="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition disabled:opacity-50"
+            disabled={isOnlyOneActivePlayer}
+          >
+            Raise
+          </button>
+        </div>
+        
+        {/* Container for Win Pot button (now on its own line) */}
+        <div className="flex justify-center flex-wrap gap-3">
+          <button
+            onClick={() => onWinPot(winningPlayerId)}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+            disabled={!isOnlyOneActivePlayer}
+          >
+            Win Pot
+          </button>
+        </div>
       </div>
-      
-      {/* Container for Win Pot button (now on its own line) */}
-      <div className="flex justify-center flex-wrap gap-3">
-        <button
-          onClick={() => onWinPot(winningPlayerId)}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
-          disabled={!isOnlyOneActivePlayer}
-        >
-          Win Pot
-        </button>
-      </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (currentPlayer) {
     return (

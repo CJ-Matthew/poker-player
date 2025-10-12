@@ -92,7 +92,7 @@ const RearrangePlayersModal: React.FC<RearrangePlayersModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
           >
             Save
           </button>

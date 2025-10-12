@@ -19,6 +19,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [tableId, setTableId] = useState('');
   const [joinBuyIn, setJoinBuyIn] = useState('');
 
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, inputType: 'create' | 'join') => {
+  if (e.key === 'Enter') {
+    if (inputType === 'create' && !(!smallBlind || !bigBlind || !buyIn || !Number.isFinite(+smallBlind) || !Number.isFinite(+bigBlind) || !Number.isFinite(+buyIn))) {
+      onCreateTable(smallBlind, bigBlind, buyIn);
+    } else if (inputType === 'join' && !(!tableId.trim() || !joinBuyIn || !Number.isFinite(+joinBuyIn))) {
+      onJoinTable(tableId, joinBuyIn);
+    }
+  }
+};
+
   return (
     // 1. Full-screen background and center everything
     <div className="flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
@@ -56,6 +67,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               value={buyIn}
               onChange={(e) => setBuyIn(e.target.value)}
               className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
+              onKeyDown={(e) => handleKeyDown(e, 'create')}
             />
             <button
               onClick={() => onCreateTable(smallBlind, bigBlind, buyIn)}
@@ -82,13 +94,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               placeholder="Buy-In Amount"
               value={joinBuyIn}
               onChange={(e) => setJoinBuyIn(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, 'join')}
               className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
             />
             <button
               onClick={() => onJoinTable(tableId, joinBuyIn)}
               // Secondary button style (a different color but same look/feel)
               className="bg-green-400 text-white hover:bg-green-500 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50"
-              disabled={!tableId || !joinBuyIn || !Number.isFinite(+joinBuyIn)}
+              disabled={!tableId.trim() || !joinBuyIn || !Number.isFinite(+joinBuyIn)}
             >
               Join Table
             </button>
