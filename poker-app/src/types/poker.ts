@@ -4,6 +4,7 @@ export interface Player {
   position: number;
   folded: boolean;
   currentBet: number;
+  active: boolean;
 }
 
 export interface TableData {

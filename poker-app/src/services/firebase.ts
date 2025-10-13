@@ -42,10 +42,11 @@ export const createTable = async (
     players: {
       [playerId]: {
         name: playerName,
-        chips: parseInt(String(buyIn)), // Set initial chips to buyIn
+        chips: parseInt(String(buyIn)),
         position: 0,
         folded: false,
-        currentBet: 0
+        currentBet: 0, 
+        active: true
       }
     },
     dealerPosition: 0,
@@ -78,6 +79,7 @@ export const joinTable = async (
   );
   
   if (existingPlayer) {
+    existingPlayer[1].active = true;
     return existingPlayer[0];
   }
 
@@ -93,7 +95,8 @@ export const joinTable = async (
     chips: parseInt(String(buyIn)),
     position: newPosition,
     folded: false,
-    currentBet: 0
+    currentBet: 0,
+    active: true
   };
 
   await update(ref(database, `tables/${tableId}/players/${playerId}`), newPlayer);
@@ -101,6 +104,7 @@ export const joinTable = async (
 };
 
 export const startRound = async (tableId: string, tableData: TableData): Promise<void> => {
+
   const players = Object.entries(tableData.players).sort(
     (a, b) => a[1].position - b[1].position
   );
