@@ -12,6 +12,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   isDealer, 
   isCurrentTurn, 
 }) => {
+  if (!player.active) {
+    return;
+  }
   return (
     <div
       className={`bg-white rounded-lg p-4 shadow-lg ${

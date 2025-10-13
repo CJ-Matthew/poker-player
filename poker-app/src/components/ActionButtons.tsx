@@ -32,6 +32,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   const activePlayers = Object.entries(tableData.players).filter(
     ([, player]) => !player.folded
   );
+  const playingPlayers = Object.entries(tableData.players).filter(
+    ([, player]) => player.active
+  );
   const isOnlyOneActivePlayer = activePlayers.length === 1;
   const winningPlayerId = isOnlyOneActivePlayer ? activePlayers[0][0] : '-1';
 
@@ -41,7 +44,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         <button
           onClick={onStartRound}
           className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
-          disabled={Object.keys(tableData.players).length === 1}
+          disabled={Object.keys(playingPlayers).length === 1}
         >
           Start Round
         </button>
