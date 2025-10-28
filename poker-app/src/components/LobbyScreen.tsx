@@ -4,121 +4,146 @@ interface LobbyScreenProps {
   playerName: string;
   onCreateTable: (smallBlind: string, bigBlind: string, buyIn: string) => void;
   onJoinTable: (tableId: string, buyIn: string) => void;
-  onBack: () => void;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   playerName,
   onCreateTable,
   onJoinTable,
-  onBack,
 }) => {
-  const [smallBlind, setSmallBlind] = useState('');
-  const [bigBlind, setBigBlind] = useState('');
-  const [buyIn, setBuyIn] = useState('');
-  const [tableId, setTableId] = useState('');
-  const [joinBuyIn, setJoinBuyIn] = useState('');
+  const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
+  const [smallBlind, setSmallBlind] = useState('1');
+  const [bigBlind, setBigBlind] = useState('2');
+  const [buyIn, setBuyIn] = useState('100');
+  const [tableIdToJoin, setTableIdToJoin] = useState('');
 
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, inputType: 'create' | 'join') => {
-  if (e.key === 'Enter') {
-    if (inputType === 'create' && !(!smallBlind || !bigBlind || !buyIn || !Number.isFinite(+smallBlind) || !Number.isFinite(+bigBlind) || !Number.isFinite(+buyIn))) {
+  const handleCreateTable = () => {
+    if (smallBlind && bigBlind && buyIn) {
       onCreateTable(smallBlind, bigBlind, buyIn);
-    } else if (inputType === 'join' && !(!tableId.trim() || !joinBuyIn || !Number.isFinite(+joinBuyIn))) {
-      onJoinTable(tableId, joinBuyIn);
     }
-  }
-};
+  };
+
+  const handleJoinTable = () => {
+    if (tableIdToJoin && buyIn) {
+      onJoinTable(tableIdToJoin, buyIn);
+    }
+  };
+
+  const handleInputChange = (
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    value: string
+  ) => {
+    if (value === '' || /^\d+$/.test(value)) {
+      setter(value);
+    }
+  };
 
   return (
-    // 1. Full-screen background and center everything
-    <div className="flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-      
-      {/* 2. Content wrapper for max width and vertical alignment */}
-      <div className="max-w-4xl w-full p-6 space-y-6">
-        
-        <h1 className="text-4xl font-extrabold text-center mb-6">
-          Welcome, {playerName}
-        </h1>
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white p-4">
+      <div className="max-w-md w-full bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+        <h1 className="text-3xl font-bold text-center mb-2">Welcome, {playerName}!</h1>
+        <p className="text-center text-white/80 mb-8">Choose an option to continue</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Create Table Section */}
-          <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
-            <h2 className="text-2xl font-semibold mb-4">Create a Table</h2>
-            <input
-              type="text"
-              placeholder="Small Blind"
-              value={smallBlind}
-              onChange={(e) => setSmallBlind(e.target.value)}
-              // Styling for white text in input and better focus state
-              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <input
-              type="text"
-              placeholder="Big Blind"
-              value={bigBlind}
-              onChange={(e) => setBigBlind(e.target.value)}
-              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <input
-              type="text"
-              placeholder="Buy-In Amount"
-              value={buyIn}
-              onChange={(e) => setBuyIn(e.target.value)}
-              className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
-              onKeyDown={(e) => handleKeyDown(e, 'create')}
-            />
+        {mode === 'select' && (
+          <div className="space-y-4">
             <button
-              onClick={() => onCreateTable(smallBlind, bigBlind, buyIn)}
-              // Primary button style (bright white to match WelcomeScreen button)
-              className="bg-white text-blue-600 hover:bg-gray-200 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50"
-              disabled={!smallBlind || !bigBlind || !buyIn || !Number.isFinite(+smallBlind) || !Number.isFinite(+bigBlind) || !Number.isFinite(+buyIn)}
+              onClick={() => setMode('create')}
+              className="w-full bg-white text-blue-600 px-6 py-4 rounded-lg font-semibold hover:bg-blue-50 transition"
             >
-              Create Table
+              Create New Table
+            </button>
+            <button
+              onClick={() => setMode('join')}
+              className="w-full bg-white/20 backdrop-blur-sm border border-white/30 px-6 py-4 rounded-lg font-semibold hover:bg-white/30 transition"
+            >
+              Join Existing Table
             </button>
           </div>
-          
-          {/* Join Table Section */}
-          <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
-            <h2 className="text-2xl font-semibold mb-4">Join a Table</h2>
-            <input
-              type="text"
-              placeholder="Table ID"
-              value={tableId}
-              onChange={(e) => setTableId(e.target.value)}
-              className="mb-3 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <input
-              type="text"
-              placeholder="Buy-In Amount"
-              value={joinBuyIn}
-              onChange={(e) => setJoinBuyIn(e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, 'join')}
-              className="mb-6 w-full p-3 rounded-lg bg-white/10 text-white placeholder-gray-300 border border-transparent focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <button
-              onClick={() => onJoinTable(tableId, joinBuyIn)}
-              // Secondary button style (a different color but same look/feel)
-              className="bg-green-400 text-white hover:bg-green-500 w-full font-bold py-3 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50"
-              disabled={!tableId.trim() || !joinBuyIn || !Number.isFinite(+joinBuyIn)}
-            >
-              Join Table
-            </button>
-          </div>
-        </div>
+        )}
 
-        {/* Back Button */}
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={onBack}
-            // Muted, outline-style back button
-            className="bg-transparent border border-white text-white hover:bg-white/20 font-semibold py-2 px-6 rounded-full transition duration-150 ease-in-out"
-          >
-            Back
-          </button>
-        </div>
-        
+        {mode === 'create' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Small Blind</label>
+              <input
+                type="text"
+                value={smallBlind}
+                onChange={(e) => handleInputChange(setSmallBlind, e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Big Blind</label>
+              <input
+                type="text"
+                value={bigBlind}
+                onChange={(e) => handleInputChange(setBigBlind, e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Buy-In Amount</label>
+              <input
+                type="text"
+                value={buyIn}
+                onChange={(e) => handleInputChange(setBuyIn, e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setMode('select')}
+                className="flex-1 bg-white/20 backdrop-blur-sm border border-white/30 px-6 py-3 rounded-lg font-semibold hover:bg-white/30 transition"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleCreateTable}
+                className="flex-1 bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'join' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Table ID</label>
+              <input
+                type="text"
+                value={tableIdToJoin}
+                onChange={(e) => setTableIdToJoin(e.target.value)}
+                placeholder="Enter table ID"
+                className="w-full px-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Buy-In Amount</label>
+              <input
+                type="text"
+                value={buyIn}
+                onChange={(e) => handleInputChange(setBuyIn, e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setMode('select')}
+                className="flex-1 bg-white/20 backdrop-blur-sm border border-white/30 px-6 py-3 rounded-lg font-semibold hover:bg-white/30 transition"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleJoinTable}
+                className="flex-1 bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+              >
+                Join
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

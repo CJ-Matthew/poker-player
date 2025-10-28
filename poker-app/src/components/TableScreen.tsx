@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { ActionButtons } from './ActionButtons';
 import type { TableData, PlayerAction, Player } from '../types/poker';
 import { EditBlindsModal } from './modals/EditBlindsModal';
 import { RaiseModal } from './modals/RaiseModal';
+import { LeaveTableModal } from './modals/LeaveTableModal';
 import ManagePlayersModal from './modals/ManagePlayersModal';
-
+import { getMinRaiseAmount } from '../services/firebase';
 
 interface TableScreenProps {
   tableId: string;
@@ -17,6 +18,7 @@ interface TableScreenProps {
   onEndRound: (winnerId: string) => void;
   onUpdateChips: (playerId: string, newChips: string) => void;
   onUpdateBlinds: (smallBlind: string, bigBlind: string) => void;
+  onLeaveTable: () => void;
 }
 
 export const TableScreen: React.FC<TableScreenProps> = ({
@@ -29,6 +31,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   onEndRound,
   onUpdateChips,
   onUpdateBlinds,
+  onLeaveTable,
 }) => {
   const [isEditingBlinds, setIsEditingBlinds] = useState(false);
   const [smallBlind, setSmallBlind] = useState('');
@@ -37,17 +40,37 @@ export const TableScreen: React.FC<TableScreenProps> = ({
   const [chipValues, setChipValues] = useState<Record<string, string>>({});
   const [copyMessage, setCopyMessage] = useState('');
   const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+
+  // Reorder players: active first, inactive last
+  const orderedPlayers = useMemo(() => {
+    if (!tableData) return [];
+    
+    return tableData.players
+      .map((player, idx) => ({
+        player,
+        playerId: tableData.playerIds[idx],
+        originalIndex: idx
+      }))
+      .sort((a, b) => {
+        // Active players come first
+        if (a.player.active && !b.player.active) return -1;
+        if (!a.player.active && b.player.active) return 1;
+        // Maintain original order within each group
+        return a.originalIndex - b.originalIndex;
+      });
+  }, [tableData]);
 
   if (!tableData) {
     return (
-      <div className="flex items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white">
         <p className="text-xl font-semibold">Loading...</p>
       </div>
     );
   }
 
-  const players = Object.entries(tableData.players).sort((a, b) => a[1].position - b[1].position);
-  const playerOrder = players.map(([id]) => id); // Add this line
+  const currentPlayerIndex = tableData.playerIds.indexOf(currentPlayerId);
+  const myPlayer = currentPlayerIndex >= 0 ? tableData.players[currentPlayerIndex] : undefined;
 
   const handleUpdateChips = (): void => {
     Object.entries(chipValues).forEach(([playerId, newChips]) => {
@@ -67,13 +90,12 @@ export const TableScreen: React.FC<TableScreenProps> = ({
 
   const handleUpdateBlinds = (): void => {
     onUpdateBlinds(smallBlind, bigBlind);
-    setIsEditingBlinds(false)
+    setIsEditingBlinds(false);
   };
 
-  const handleRaise = (amount: string): void => {
-
-    if (amount && parseInt(amount, 10) > 0) {
-      onPlayerAction('raise', parseInt(amount, 10));
+  const handleRaise = (amount: number): void => {
+    if (amount && amount > 0) {
+      onPlayerAction('raise', amount);
     }
   };
 
@@ -89,20 +111,82 @@ export const TableScreen: React.FC<TableScreenProps> = ({
     }
   };
 
+  const handleLeaveConfirm = () => {
+    setIsLeaveModalOpen(false);
+    onLeaveTable();
+  };
+
   const currentPlayer: [string, Player] | null =
-    tableData.currentTurn >= 0 && tableData.currentTurn < playerOrder.length
-      ? [playerOrder[tableData.currentTurn], tableData.players[playerOrder[tableData.currentTurn]]]
+    tableData.currentTurn >= 0 && tableData.currentTurn < tableData.players.length
+      ? [tableData.playerIds[tableData.currentTurn], tableData.players[tableData.currentTurn]]
       : null;
 
   const handleEditBlinds = (): void => {
-    setSmallBlind(String(tableData.smallBlind)); // Initialize with current small blind
-    setBigBlind(String(tableData.bigBlind)); // Initialize with current big blind
-    setIsEditingBlinds(true); // Open the modal
+    setSmallBlind(String(tableData.smallBlind));
+    setBigBlind(String(tableData.bigBlind));
+    setIsEditingBlinds(true);
   };
 
-  return (
-    <div className="relative flex flex-col items-center justify-center h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+  const handleEditChips = (): void => {
+    const initialChipValues = Object.fromEntries(
+      tableData.playerIds.map((playerId, index) => [playerId, String(tableData.players[index].chips)])
+    );
+    setChipValues(initialChipValues);
+    setIsRearrangingPlayers(true);
+  };
 
+  const getActivePlayersInfo = () => {
+    const activeData = tableData.players
+      .map((player, index) => ({ player, index }))
+      .filter(({ player }) => player.active);
+    return activeData;
+  };
+
+  const getBlindPositions = () => {
+    if (!tableData.roundActive) {
+      return { smallBlindIndex: -1, bigBlindIndex: -1 };
+    }
+
+    const activePlayersInfo = getActivePlayersInfo();
+    if (activePlayersInfo.length < 2) {
+      return { smallBlindIndex: -1, bigBlindIndex: -1 };
+    }
+
+    const dealerActiveIndex = activePlayersInfo.findIndex(({ index }) => index === tableData.dealerPosition);
+    if (dealerActiveIndex === -1) {
+      return { smallBlindIndex: -1, bigBlindIndex: -1 };
+    }
+
+    const sbActiveIndex = (dealerActiveIndex + 1) % activePlayersInfo.length;
+    const bbActiveIndex = (dealerActiveIndex + 2) % activePlayersInfo.length;
+
+    return {
+      smallBlindIndex: activePlayersInfo[sbActiveIndex].index,
+      bigBlindIndex: activePlayersInfo[bbActiveIndex].index
+    };
+  };
+
+  const { smallBlindIndex, bigBlindIndex } = getBlindPositions();
+
+  const getRoundStageDisplay = (stage: string): string => {
+    switch (stage) {
+      case 'PRE_FLOP':
+        return 'Pre-Flop';
+      case 'FLOP':
+        return 'Flop';
+      case 'TURN':
+        return 'Turn';
+      case 'RIVER':
+        return 'River';
+      default:
+        return '';
+    }
+  };
+
+  const minRaiseAmount = getMinRaiseAmount(tableData);
+
+  return (
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
       <style>{`
         .no-spinners::-webkit-outer-spin-button,
         .no-spinners::-webkit-inner-spin-button {
@@ -110,9 +194,8 @@ export const TableScreen: React.FC<TableScreenProps> = ({
           margin: 0;
         }
         .no-spinners {
-          -moz-appearance: textfield; /* Firefox */
+          -moz-appearance: textfield;
         }
-        /* Simple fade-in-out animation for the message */
         @keyframes fade-in-out {
           0%, 100% { opacity: 0; transform: translate(-50%, -20px); }
           10%, 90% { opacity: 1; transform: translate(-50%, 16px); }
@@ -150,26 +233,25 @@ export const TableScreen: React.FC<TableScreenProps> = ({
             >
               Blinds
             </button>
-            {/* <button
-              onClick={handleEditChips}
-              className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
-              disabled={tableData.roundActive}
-            >
-              Chips
-            </button> */}
             <button
               onClick={onMoveDealer}
-              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+              className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
               disabled={tableData.roundActive}
             >
               Dealer
             </button>
             <button
-              onClick={() => setIsRearrangingPlayers(true)}
-              className="text-sm text-blue-300 hover:text-blue-100  disabled:opacity-50"
+              onClick={handleEditChips}
+              className="text-sm text-blue-300 hover:text-blue-100 disabled:opacity-50"
               disabled={tableData.roundActive}
             >
               Players
+            </button>
+            <button
+              onClick={() => setIsLeaveModalOpen(true)}
+              className="text-sm text-red-300 hover:text-red-100"
+            >
+              Leave
             </button>
           </div>
         </div>
@@ -179,20 +261,19 @@ export const TableScreen: React.FC<TableScreenProps> = ({
         <ManagePlayersModal
           tableId={tableId}
           players={tableData.players}
-          playerOrder={playerOrder}
+          playerIds={tableData.playerIds}
           chipValues={chipValues}
           onChipChange={handleChipInputChange}
           onSaveChips={handleUpdateChips}
-          onSaveRearrange={(newOrder) => {
-            // Update player positions based on the new order
-            const updatedPlayers = Object.fromEntries(
-              newOrder.map(([id, player], index) => [
-                id,
-                { ...player, position: index },
-              ])
-            );
-            // Update tableData.players with the new positions
-            tableData.players = updatedPlayers;
+          onSaveRearrange={async (newOrderedIds) => {
+            try {
+              const { updatePlayerPositions } = await import('../services/firebase');
+              await updatePlayerPositions(tableId, newOrderedIds);
+              setIsRearrangingPlayers(false);
+            } catch (err) {
+              console.error('Error updating player positions:', err);
+              alert('Failed to update positions.');
+            }
           }}
           onClose={() => setIsRearrangingPlayers(false)}
         />
@@ -209,55 +290,72 @@ export const TableScreen: React.FC<TableScreenProps> = ({
         />
       )}
 
-      {/* {isRearrangingPlayers && (
-        <RearrangePlayersModal
-          tableId={tableId}
-          players={tableData.players}
-          onClose={() => setIsRearrangingPlayers(false)}
-        />
-      )} */}
-
-      {isRaiseModalOpen && (
+      {isRaiseModalOpen && myPlayer && (
         <RaiseModal
           currentBet={tableData.currentBet}
-          minRaise={tableData.currentBet*2}
+          minRaise={minRaiseAmount}
+          myCurrentBet={myPlayer.currentBet}
           onRaise={(amount: number) => {
-            handleRaise(String(amount));
+            handleRaise(amount);
             setIsRaiseModalOpen(false);
           }}
           onCancel={() => setIsRaiseModalOpen(false)}
         />
       )}
 
-      {/* Main Content */}
-      <div className="max-w-6xl w-full p-6 space-y-6 mt-20">
-        <div className="text-center p-4 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
-          <h3 className="text-2xl font-bold text-yellow-300">Current Pot: ${tableData.pot}</h3>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {playerOrder.map((id, idx) => (
-            <PlayerCard
-              key={id}
-              player={tableData.players[id]}
-              isDealer={idx === tableData.dealerPosition}
-              isCurrentTurn={tableData.currentTurn === idx}
+      {isLeaveModalOpen && (
+        <LeaveTableModal
+          onConfirm={handleLeaveConfirm}
+          onCancel={() => setIsLeaveModalOpen(false)}
+        />
+      )}
+
+      <div className="min-h-screen flex flex-col pt-24 pb-8 px-6">
+        <div className="max-w-6xl w-full mx-auto space-y-6">
+          <div className="text-center p-4 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30">
+            <div className="flex justify-center items-center gap-6">
+              <h3 className="text-2xl font-bold text-yellow-300">
+                Current Pot: ${tableData.pot}
+              </h3>
+              {tableData.roundStage && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-300">|</span>
+                  <h3 className="text-2xl font-bold text-green-300">
+                    {getRoundStageDisplay(tableData.roundStage)}
+                  </h3>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 auto-rows-min">
+            {orderedPlayers.map(({ player, playerId, originalIndex }) => (
+              <PlayerCard
+                key={playerId}
+                player={player}
+                playerId={playerId}
+                isDealer={originalIndex === tableData.dealerPosition}
+                isSmallBlind={originalIndex === smallBlindIndex}
+                isBigBlind={originalIndex === bigBlindIndex}
+                isCurrentTurn={tableData.currentTurn === originalIndex}
+                isCurrentPlayer={playerId === currentPlayerId}
+              />
+            ))}
+          </div>
+          <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30 flex justify-center">
+            <ActionButtons
+              isMyTurn={tableData.currentTurn === tableData.playerIds.indexOf(currentPlayerId)}
+              currentPlayer={currentPlayer}
+              myPlayer={myPlayer}
+              currentBet={tableData.currentBet}
+              roundActive={tableData.roundActive}
+              tableData={tableData}
+              onFold={() => onPlayerAction('fold')}
+              onCall={() => onPlayerAction('call')}
+              onRaiseOpen={() => setIsRaiseModalOpen(true)}
+              onStartRound={onStartRound}
+              onWinPot={onEndRound}
             />
-          ))}
-        </div>
-        <div className="p-6 bg-blue-900/50 backdrop-blur-sm shadow-xl rounded-xl border border-blue-400/30 flex justify-center">
-          <ActionButtons
-            isMyTurn={tableData.currentTurn === playerOrder.findIndex((id) => id === currentPlayerId)}
-            currentPlayer={currentPlayer}
-            myPlayer={tableData.players[currentPlayerId]}
-            currentBet={tableData.currentBet}
-            roundActive={tableData.roundActive}
-            tableData={tableData}
-            onFold={() => onPlayerAction('fold')}
-            onCall={() => onPlayerAction('call')}
-            onRaiseOpen={() => setIsRaiseModalOpen(true)}
-            onStartRound={onStartRound}
-            onWinPot={onEndRound}
-          />
+          </div>
         </div>
       </div>
     </div>

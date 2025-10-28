@@ -17,25 +17,26 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* FIX: Ensure the body does not try to center its contents, 
-  which was causing the shift to the right. 
-*/
-body {
+html,
+body,
+#root {
   margin: 0;
-  /* Removed: display: flex; */
-  /* Removed: place-items: center; */
-  min-width: 320px;
-  min-height: 100vh;
-
-  @apply bg-gray-100 text-gray-800 font-sans;
+  padding: 0;
+  height: 100%;
+  width: 100%;
 }
 
-/* NEW: Ensure the root element (#root, where React renders) 
-  takes up the full width and height of the body.
-*/
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 #root {
-  width: 100%;
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {

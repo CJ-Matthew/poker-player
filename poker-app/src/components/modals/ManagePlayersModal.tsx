@@ -9,18 +9,18 @@ import type { Player } from '../../types/poker';
 
 interface ManagePlayersModalProps {
   tableId: string;
-  players: Record<string, Player>;
-  playerOrder: string[];
+  players: Player[];
+  playerIds: string[];
   chipValues: Record<string, string>;
   onChipChange: (playerId: string, value: string) => void;
   onSaveChips: () => void;
-  onSaveRearrange: (newOrder: [string, Player][]) => void;
+  onSaveRearrange: (newOrderedIds: string[]) => void;
   onClose: () => void;
 }
 
 const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
   players,
-  playerOrder,
+  playerIds,
   chipValues,
   onChipChange,
   onSaveChips,
@@ -28,9 +28,25 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'rearrange' | 'chips'>('rearrange');
-  const [rearrangedOrder, setRearrangedOrder] = useState(
-    Object.entries(players).sort((a, b) => a[1].position - b[1].position)
-  );
+  
+  // Filter out inactive players and create rearrangeable order
+  const activePlayerData = playerIds
+    .map((id, index) => ({ 
+      id, 
+      player: players[index],
+      originalIndex: index 
+    }))
+    .filter(item => item.player.active);
+  
+  const inactivePlayerData = playerIds
+    .map((id, index) => ({ 
+      id, 
+      player: players[index],
+      originalIndex: index 
+    }))
+    .filter(item => !item.player.active);
+  
+  const [rearrangedOrder, setRearrangedOrder] = useState(activePlayerData);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -43,18 +59,42 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
   };
 
   const handleSaveRearrange = () => {
-    onSaveRearrange(rearrangedOrder);
-    onClose();
+    // Combine reordered active players with inactive players at the end
+    const newOrderedIds = [
+      ...rearrangedOrder.map(item => item.id),
+      ...inactivePlayerData.map(item => item.id)
+    ];
+    onSaveRearrange(newOrderedIds);
   };
 
   const handleSaveChips = () => {
     onSaveChips();
-    onClose();
+  };
+
+  const handleInputChange = (playerId: string, value: string) => {
+    // Allow empty string or valid numeric input
+    if (value === '' || /^\d+$/.test(value)) {
+      onChipChange(playerId, value);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeTab === 'rearrange') {
+        handleSaveRearrange();
+      } else {
+        handleSaveChips();
+      }
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onKeyDown={handleKeyDown}
+    >
+      <div className="bg-white rounded-lg shadow-lg p-6 w-96 max-h-[80vh] flex flex-col">
         <h3 className="text-xl font-bold mb-4 text-gray-800">Manage Players</h3>
 
         {/* Tabs */}
@@ -67,7 +107,7 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
                 : 'bg-gray-200 text-gray-800'
             }`}
           >
-            Rearrange Players
+            Rearrange
           </button>
           <button
             onClick={() => setActiveTab('chips')}
@@ -83,7 +123,7 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
 
         {/* Rearrange Players Tab */}
         {activeTab === 'rearrange' && (
-          <div className="max-h-64 overflow-y-auto border rounded-lg">
+          <div className="flex-1 overflow-y-auto border rounded-lg">
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="players">
                 {(provided) => (
@@ -92,8 +132,8 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
                     ref={provided.innerRef}
                     className="divide-y divide-gray-200"
                   >
-                    {rearrangedOrder.map(([id, player], index) => (
-                      <Draggable key={id} draggableId={id} index={index}>
+                    {rearrangedOrder.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id} index={index}>
                         {(provided, snapshot) => (
                           <li
                             ref={provided.innerRef}
@@ -106,10 +146,10 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
                             }`}
                           >
                             <span className="font-medium text-black">
-                              {player.name}
+                              {item.player.name}
                             </span>
                             <span className="text-sm text-gray-500">
-                              Chips: {player.chips}
+                              Chips: {item.player.chips}
                             </span>
                           </li>
                         )}
@@ -120,14 +160,41 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
                 )}
               </Droppable>
             </DragDropContext>
+            
+            {/* Show inactive players (non-draggable) */}
+            {inactivePlayerData.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 mb-2 px-3">
+                  Inactive Players
+                </h4>
+                <ul className="divide-y divide-gray-200 opacity-50">
+                  {inactivePlayerData.map((item) => (
+                    <li
+                      key={item.id}
+                      className="p-3 flex justify-between items-center bg-gray-50"
+                    >
+                      <span className="font-medium text-gray-600">
+                        {item.player.name}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        Left Table
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
         {/* Edit Chips Tab */}
         {activeTab === 'chips' && (
-          <form className="space-y-4">
-            {playerOrder.map((playerId) => {
-              const player = players[playerId];
+          <form className="space-y-4 flex-1 overflow-y-auto">
+            {/* Active Players */}
+            {playerIds.map((playerId, index) => {
+              const player = players[index];
+              if (!player || !player.active) return null;
+              
               return (
                 <div
                   key={playerId}
@@ -135,14 +202,39 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
                 >
                   <span className="text-gray-800">{player.name}:</span>
                   <input
-                    type="number"
+                    type="text"
                     value={chipValues[playerId] ?? player.chips}
-                    onChange={(e) => onChipChange(playerId, e.target.value)}
+                    onChange={(e) => handleInputChange(playerId, e.target.value)}
                     className="no-spinners w-24 p-2 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               );
             })}
+            
+            {/* Inactive Players (read-only) */}
+            {inactivePlayerData.length > 0 && (
+              <>
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                    Inactive Players (Cannot Edit)
+                  </h4>
+                </div>
+                {inactivePlayerData.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between opacity-50"
+                  >
+                    <span className="text-gray-600">{item.player.name}:</span>
+                    <input
+                      type="text"
+                      value={item.player.chips}
+                      disabled
+                      className="no-spinners w-24 p-2 rounded-lg bg-gray-200 text-gray-600 border border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+                ))}
+              </>
+            )}
           </form>
         )}
 
@@ -159,15 +251,16 @@ const ManagePlayersModal: React.FC<ManagePlayersModalProps> = ({
               onClick={handleSaveRearrange}
               className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
             >
-              Save
+              Save Order
             </button>
           )}
           {activeTab === 'chips' && (
             <button
               onClick={handleSaveChips}
               className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
+              disabled={Object.keys(chipValues).length === 0}
             >
-              Save
+              Save Chips
             </button>
           )}
         </div>
