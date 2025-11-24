@@ -1,4 +1,4 @@
-import type { TableData, PlayerAction } from '../types/poker';
+import type {PlayerAction } from '../types/poker';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -153,7 +153,7 @@ export const updatePlayerPositions = async (tableId: string, orderedPlayerIds: s
     }
 };
 
-export const endRound = async (tableId: string, tableData: TableData, winnerId: string): Promise<void> => {
+export const endRound = async (tableId: string, winnerId: string): Promise<void> => {
     const response = await fetch(`${API_URL}/tables/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
