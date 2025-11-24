@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import type { TableData } from '../types/poker';
 
-export const useTable = (tableId: string): TableData | null => {
+export const useTable = (tableId: string): [TableData | null, React.Dispatch<React.SetStateAction<TableData | null>>] => {
   const [tableData, setTableData] = useState<TableData | null>(null);
 
   useEffect(() => {
@@ -49,5 +49,5 @@ export const useTable = (tableId: string): TableData | null => {
     };
   }, [tableId]);
 
-  return tableData;
+  return [tableData, setTableData];
 };

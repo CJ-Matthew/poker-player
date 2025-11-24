@@ -23,7 +23,7 @@ function App() {
   const [tableId, setTableId] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
 
-  const tableData = useTable(tableId);
+  const [tableData, setTableData] = useTable(tableId);
 
   useEffect(() => {
     if (screen === 'table' && tableData && playerId) {
@@ -68,13 +68,18 @@ function App() {
   const handleStartRound = useCallback(async () => {
     if (!tableId || !tableData) return;
     
+    // Optimistic update
+    const previousTableData = tableData;
+    setTableData(prev => prev ? { ...prev, roundActive: true } : null);
+
     try {
       await startRound(tableId);
     } catch (error) {
       console.error('Error starting round:', error);
       alert('Failed to start round. Make sure there are at least 2 active players.');
+      setTableData(previousTableData);
     }
-  }, [tableId, tableData]);
+  }, [tableId, tableData, setTableData]);
 
   const handleMoveDealer = useCallback(async () => {
     if (!tableId) return;
@@ -90,13 +95,52 @@ function App() {
   const handlePlayerAction = useCallback(async (action: PlayerAction, raiseAmount?: number) => {
     if (!tableId || !tableData || !playerId) return;
     
+    const playerIndex = tableData.playerIds.indexOf(playerId);
+    if (playerIndex === -1) return;
+
+    // Optimistic update
+    const previousTableData = tableData;
+    setTableData(prev => {
+      if (!prev) return null;
+      const newPlayers = [...prev.players];
+      const player = { ...newPlayers[playerIndex] };
+      let newPot = prev.pot;
+      let newCurrentBet = prev.currentBet;
+
+      if (action === 'fold') {
+        player.folded = true;
+      } else if (action === 'call') {
+        const callAmount = prev.currentBet - player.currentBet;
+        player.chips -= callAmount;
+        player.currentBet += callAmount;
+        newPot += callAmount;
+      } else if (action === 'raise' && raiseAmount) {
+        const totalBet = prev.currentBet + raiseAmount;
+        const addedAmount = totalBet - player.currentBet;
+        player.chips -= addedAmount;
+        player.currentBet = totalBet;
+        newPot += addedAmount;
+        newCurrentBet = totalBet;
+      }
+
+      newPlayers[playerIndex] = player;
+
+      return {
+        ...prev,
+        players: newPlayers,
+        pot: newPot,
+        currentBet: newCurrentBet,
+      };
+    });
+
     try {
       await playerAction(tableId, playerId, action, raiseAmount);
     } catch (error) {
       console.error('Error performing action:', error);
       alert('Failed to perform action.');
+      setTableData(previousTableData);
     }
-  }, [tableId, tableData, playerId]);
+  }, [tableId, tableData, playerId, setTableData]);
 
   const handleEndRound = useCallback(async (winnerId: string) => {
     if (!tableId || !tableData) return;
