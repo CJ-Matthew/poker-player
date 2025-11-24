@@ -6,7 +6,7 @@ import { EditBlindsModal } from './modals/EditBlindsModal';
 import { RaiseModal } from './modals/RaiseModal';
 import { LeaveTableModal } from './modals/LeaveTableModal';
 import ManagePlayersModal from './modals/ManagePlayersModal';
-import { getMinRaiseAmount } from '../services/firebase';
+import { getMinRaiseAmount } from '../utils/poker';
 
 interface TableScreenProps {
   tableId: string;
@@ -267,7 +267,7 @@ export const TableScreen: React.FC<TableScreenProps> = ({
           onSaveChips={handleUpdateChips}
           onSaveRearrange={async (newOrderedIds) => {
             try {
-              const { updatePlayerPositions } = await import('../services/firebase');
+              const { updatePlayerPositions } = await import('../services/api');
               await updatePlayerPositions(tableId, newOrderedIds);
               setIsRearrangingPlayers(false);
             } catch (err) {

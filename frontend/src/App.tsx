@@ -13,7 +13,7 @@ import {
   updatePlayerChips,
   updateBlinds,
   leaveTable
-} from './services/firebase';
+} from './services/api';
 import type { PlayerAction } from './types/poker';
 import './App.css';
 
@@ -69,7 +69,7 @@ function App() {
     if (!tableId || !tableData) return;
     
     try {
-      await startRound(tableId, tableData);
+      await startRound(tableId);
     } catch (error) {
       console.error('Error starting round:', error);
       alert('Failed to start round. Make sure there are at least 2 active players.');
@@ -91,7 +91,7 @@ function App() {
     if (!tableId || !tableData || !playerId) return;
     
     try {
-      await playerAction(tableId, tableData, playerId, action, raiseAmount);
+      await playerAction(tableId, playerId, action, raiseAmount);
     } catch (error) {
       console.error('Error performing action:', error);
       alert('Failed to perform action.');
