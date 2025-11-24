@@ -102,7 +102,7 @@ function App() {
     if (!tableId || !tableData) return;
     
     try {
-      await endRound(tableId, tableData, winnerId);
+      await endRound(tableId, winnerId);
     } catch (error) {
       console.error('Error ending round:', error);
       alert('Failed to end round.');
